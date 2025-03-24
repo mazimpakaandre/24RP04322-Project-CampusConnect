@@ -1,0 +1,65 @@
+pipeline {
+    agent any
+
+    environment {
+        KUBECONFIG = credentials('kubeconfig')
+        DOCKER_REGISTRY = 'campusconnect'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    // Apply Kubernetes configurations
+                    sh 'kubectl apply -f k8s/backend-deployment.yaml'
+                    sh 'kubectl apply -f k8s/microservice-deployment.yaml'
+                    sh 'kubectl apply -f k8s/nginx-ingress.yaml'
+
+                    // Wait for deployments to be ready
+                    sh 'kubectl rollout status deployment/backend'
+                    sh 'kubectl rollout status deployment/microservice'
+                }
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                script {
+                    // Check service health
+                    sh '''
+                        kubectl get pods -l app=backend
+                        kubectl get pods -l app=microservice
+                        kubectl get ingress campusconnect-ingress
+                    '''
+                }
+            }
+        }
+
+        stage('Post-deployment Tasks') {
+            steps {
+                script {
+                    // Update deployment status
+                    sh 'kubectl get all -n default'
+                    
+                    // Log deployment success
+                    echo 'Deployment completed successfully'
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline executed successfully'
+        }
+        failure {
+            echo 'Pipeline execution failed'
+        }
+    }
+}

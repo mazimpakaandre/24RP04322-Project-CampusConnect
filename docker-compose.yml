@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=mysql
+      - DB_USER=campusconnect
+      - DB_PASSWORD=securepassword
+      - DB_NAME=campusconnect
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+    depends_on:
+      - mysql
+      - rabbitmq
+
+  microservice:
+    build:
+      context: ./microservice
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=mysql
+      - DB_USER=campusconnect
+      - DB_PASSWORD=securepassword
+      - DB_NAME=campusconnect
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+    depends_on:
+      - mysql
+      - rabbitmq
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpassword
+      - MYSQL_DATABASE=campusconnect
+      - MYSQL_USER=campusconnect
+      - MYSQL_PASSWORD=securepassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+volumes:
+  mysql_data:
